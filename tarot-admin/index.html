@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小鹿塔罗 - 管理后台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6b4c9a;
+      --primary-dark: #4a3370;
+      --success: #07c160;
+      --warning: #ff9800;
+      --danger: #ff5252;
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --text-muted: #666;
+      --border: #e0e0e0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans SC', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* 登录页 */
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    }
+
+    .login-box {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .login-box h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--primary);
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 15px;
+      margin-bottom: 15px;
+    }
+
+    .login-box button {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* 管理后台 */
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* 侧边栏 */
+    .sidebar {
+      width: 240px;
+      background: white;
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .sidebar-logo h1 {
+      font-size: 20px;
+      color: var(--primary);
+    }
+
+    .sidebar-logo span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .nav-item {
+      padding: 12px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      background: rgba(107, 76, 154, 0.1);
+      color: var(--primary);
+    }
+
+    .nav-item.active {
+      font-weight: 500;
+    }
+
+    /* 主内容 */
+    .main {
+      flex: 1;
+      margin-left: 240px;
+      padding: 30px;
+    }
+
+    /* 统计卡片 */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .stat-card .label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    /* 表格 */
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-header h2 {
+      font-size: 16px;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #fafafa;
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+
+    .badge-success { background: #e8f5e9; color: #2e7d32; }
+    .badge-warning { background: #fff3e0; color: #e65100; }
+    .badge-danger { background: #ffebee; color: #c62828; }
+
+    /* 表单 */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+
+    /* 弹窗 */
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.hidden { display: none; }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    /* 搜索 */
+    .search-box {
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-box input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 1001;
+      animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* 分页 */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .pagination button {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .pagination button.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 登录页 -->
+  <div id="login-page" class="login-page">
+    <div class="login-box">
+      <h1>🔮 管理后台</h1>
+      <input type="text" id="username" placeholder="管理员账号" value="admin">
+      <input type="password" id="password" placeholder="密码" value="admin123">
+      <button onclick="doLogin()">登录</button>
+    </div>
+  </div>
+
+  <!-- 管理后台 -->
+  <div id="admin-page" class="admin-layout" style="display: none;">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <h1>🔮 小鹿塔罗</h1>
+        <span>管理后台</span>
+      </div>
+      <div class="nav-item active" onclick="showSection('dashboard')">📊 数据概览</div>
+      <div class="nav-item" onclick="showSection('users')">👥 用户管理</div>
+      <div class="nav-item" onclick="showSection('config')">⚙️ 系统配置</div>
+      <div class="nav-item" onclick="doLogout()">🚪 退出登录</div>
+    </div>
+
+    <div class="main">
+      <!-- 数据概览 -->
+      <div id="section-dashboard" class="section">
+        <h1 style="margin-bottom: 30px;">数据概览</h1>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">总用户数</div>
+            <div class="value" id="stat-users">-</div>
+            <div class="sub">注册用户</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">总占卜次数</div>
+            <div class="value" id="stat-readings">-</div>
+            <div class="sub">完成解读</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">今日签到</div>
+            <div class="value" id="stat-checkins">-</div>
+            <div class="sub">活跃用户</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">今日占卜</div>
+            <div class="value" id="stat-today-readings">-</div>
+            <div class="sub">占卜次数</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">缓存命中率</div>
+            <div class="value" id="stat-cache">-</div>
+            <div class="sub">AI解读缓存</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 用户管理 -->
+      <div id="section-users" class="section" style="display: none;">
+        <h1 style="margin-bottom: 30px;">用户管理</h1>
+        <div class="card">
+          <div class="card-header">
+            <h2>用户列表</h2>
+            <div class="search-box">
+              <input type="text" id="user-search" placeholder="搜索手机号/昵称">
+              <button class="btn btn-primary" onclick="searchUsers()">搜索</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>用户ID</th>
+                  <th>手机号</th>
+                  <th>积分</th>
+                  <th>注册时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="users-table">
+                <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">加载中...</td></tr>
+              </tbody>
+            </table>
+            <div class="pagination" id="users-pagination"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 系统配置 -->
+      <div id="section-config" class="section" style="display: none;">
+        <h1 style="margin-bottom: 30px;">系统配置</h1>
+        
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header"><h2>AI 模型配置</h2></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>AI 模型</label>
+              <select id="config-ai_model">
+                <option value="openrouter/qwen/qwen3-4b:free">Qwen3-4B (免费)</option>
+                <option value="openrouter/meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (免费)</option>
+                <option value="openrouter/google/gemini-2.0-flash:free">Gemini 2.0 Flash (免费)</option>
+                <option value="openai/gpt-5.4">GPT-5.4</option>
+              </select>
+              <small style="color: var(--text-muted);">通过 OpenRouter 调用，支持免费模型</small>
+            </div>
+            <div class="form-group">
+              <label>API Key</label>
+              <input type="password" id="config-ai_api_key" placeholder="OpenRouter API Key">
+            </div>
+            <button class="btn btn-primary" onclick="saveConfig('ai_model', 'ai_api_key')">保存</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header"><h2>微信支付配置</h2></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>AppID</label>
+              <input type="text" id="config-wechat_appid" placeholder="微信支付AppID">
+            </div>
+            <div class="form-group">
+              <label>商户号</label>
+              <input type="text" id="config-wechat_mchid" placeholder="微信支付商户号">
+            </div>
+            <div class="form-group">
+              <label>API密钥</label>
+              <input type="password" id="config-wechat_apikey" placeholder="微信支付API密钥">
+            </div>
+            <button class="btn btn-primary" onclick="saveConfig('wechat_appid', 'wechat_mchid', 'wechat_apikey')">保存</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2>积分套餐配置</h2></div>
+          <div class="card-body">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+              <div class="form-group">
+                <label>基础包 (1元)</label>
+                <input type="number" id="config-package_basic" placeholder="积分数量">
+              </div>
+              <div class="form-group">
+                <label>小包 (10元)</label>
+                <input type="number" id="config-package_small" placeholder="积分数量">
+              </div>
+              <div class="form-group">
+                <label>中包 (20元)</label>
+                <input type="number" id="config-package_medium" placeholder="积分数量">
+              </div>
+              <div class="form-group">
+                <label>大包 (30元)</label>
+                <input type="number" id="config-package_large" placeholder="积分数量">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="savePackageConfig()">保存套餐</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 用户详情弹窗 -->
+  <div id="user-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>用户详情</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div id="user-detail"></div>
+    </div>
+  </div>
+
+  <!-- 积分调整弹窗 -->
+  <div id="points-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>调整积分</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>调整积分（正数增加，负数减少）</label>
+        <input type="number" id="points-adjust" placeholder="例如: 10 或 -5">
+      </div>
+      <div class="form-group">
+        <label>原因</label>
+        <input type="text" id="points-reason" placeholder="调整原因">
+      </div>
+      <button class="btn btn-primary" onclick="submitPointsAdjust()">确认</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" style="display: none;"></div>
+
+  <script>
+    const API_BASE = 'http://localhost:3005/api';
+    let token = localStorage.getItem('admin_token');
+    let currentUserId = null;
+    let currentPage = 1;
+
+    function $(id) { return document.getElementById(id); }
+
+    function showToast(msg) {
+      const toast = $('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 3000);
+    }
+
+    async function doLogin() {
+      const username = $('username').value;
+      const password = $('password').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          token = data.data.token;
+          localStorage.setItem('admin_token', token);
+          $('login-page').style.display = 'none';
+          $('admin-page').style.display = 'flex';
+          loadDashboard();
+        } else {
+          showToast(data.error);
+        }
+      } catch (e) {
+        showToast('登录失败');
+      }
+    }
+
+    function doLogout() {
+      localStorage.removeItem('admin_token');
+      location.reload();
+    }
+
+    function showSection(name) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      $('section-' + name).style.display = 'block';
+      event.target.classList.add('active');
+
+      if (name === 'dashboard') loadDashboard();
+      if (name === 'users') loadUsers();
+      if (name === 'config') loadConfig();
+    }
+
+    function getHeaders() {
+      return { Authorization: `Bearer ${token}` };
+    }
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/stats`, { headers: getHeaders() });
+        const data = await res.json();
+        if (data.success) {
+          $('stat-users').textContent = data.data.total_users;
+          $('stat-readings').textContent = data.data.total_readings;
+          $('stat-checkins').textContent = data.data.today_checkins;
+          $('stat-today-readings').textContent = data.data.today_readings;
+          $('stat-cache').textContent = data.data.cache_hit_rate;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadUsers(page = 1) {
+      currentPage = page;
+      try {
+        const search = $('user-search')?.value || '';
+        const res = await fetch(`${API_BASE}/admin/users?page=${page}&limit=20&search=${search}`, { headers: getHeaders() });
+        const data = await res.json();
+        
+        if (data.success) {
+          renderUsers(data.data.users);
+          renderPagination(data.data.total, page);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderUsers(users) {
+      const tbody = $('users-table');
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">暂无数据</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>${u.id.substring(0, 8)}...</td>
+          <td>${u.phone || '-'}</td>
+          <td><strong style="color: var(--primary);">${u.points}</strong></td>
+          <td>${new Date(u.created_at).toLocaleDateString()}</td>
+          <td>
+            <button class="btn btn-primary" style="padding: 5px 10px; margin-right: 5px;" onclick="viewUser('${u.id}')">详情</button>
+            <button class="btn btn-success" style="padding: 5px 10px;" onclick="openPointsModal('${u.id}')">调积分</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPagination(total, page) {
+      const totalPages = Math.ceil(total / 20);
+      const pagination = $('users-pagination');
+      
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="${i === page ? 'active' : ''}" onclick="loadUsers(${i})">${i}</button>`;
+      }
+      pagination.innerHTML = html;
+    }
+
+    function searchUsers() {
+      loadUsers(1);
+    }
+
+    async function viewUser(userId) {
+      try {
+        const res = await fetch(`${API_BASE}/admin/users/${userId}`, { headers: getHeaders() });
+        const data = await res.json();
+        
+        if (data.success) {
+          const u = data.data;
+          $('user-detail').innerHTML = `
+            <div style="margin-bottom: 15px;">
+              <strong>手机号：</strong>${u.phone || '-'}
+            </div>
+            <div style="margin-bottom: 15px;">
+              <strong>当前积分：</strong><span style="color: var(--primary);">${u.points}</span>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <strong>注册时间：</strong>${new Date(u.created_at).toLocaleString()}
+            </div>
+            <div style="margin-bottom: 15px;">
+              <strong>最近解读：</strong>${u.readings?.length || 0} 条
+            </div>
+            <div style="margin-bottom: 15px;">
+              <strong>签到记录：</strong>${u.checkins?.length || 0} 次
+            </div>
+            <h4 style="margin: 15px 0 10px;">积分流水</h4>
+            <div style="max-height: 200px; overflow-y: auto;">
+              ${(u.transactions || []).map(t => `
+                <div style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px;">
+                  <span style="color: ${t.amount > 0 ? 'var(--success)' : 'var(--danger)'};">
+                    ${t.amount > 0 ? '+' : ''}${t.amount}
+                  </span>
+                  <span style="color: var(--text-muted); margin-left: 10px;">${t.reason}</span>
+                  <span style="color: #999; font-size: 11px; float: right;">${new Date(t.created_at).toLocaleDateString()}</span>
+                </div>
+              `).join('') || '<p style="color: var(--text-muted);">暂无记录</p>'}
+            </div>
+          `;
+          showModal('user-modal');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function openPointsModal(userId) {
+      currentUserId = userId;
+      $('points-adjust').value = '';
+      $('points-reason').value = '';
+      showModal('points-modal');
+    }
+
+    async function submitPointsAdjust() {
+      const amount = parseInt($('points-adjust').value);
+      const reason = $('points-reason').value;
+
+      if (isNaN(amount)) {
+        showToast('请输入积分数量');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/admin/users/${currentUserId}/points`, {
+          method: 'POST',
+          headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, reason })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast(`积分已调整为 ${data.data.new_points}`);
+          closeModal();
+          loadUsers(currentPage);
+        } else {
+          showToast(data.error);
+        }
+      } catch (e) {
+        showToast('操作失败');
+      }
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/config`, { headers: getHeaders() });
+        const data = await res.json();
+        
+        if (data.success) {
+          const c = data.data;
+          if (c.ai_model) $('config-ai_model').value = c.ai_model;
+          if (c.ai_api_key) $('config-ai_api_key').value = c.ai_api_key;
+          if (c.wechat_appid) $('config-wechat_appid').value = c.wechat_appid;
+          if (c.wechat_mchid) $('config-wechat_mchid').value = c.wechat_mchid;
+          if (c.wechat_apikey) $('config-wechat_apikey').value = c.wechat_apikey;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function saveConfig(...keys) {
+      const values = {};
+      keys.forEach(key => {
+        const el = $(`config-${key}`);
+        if (el) values[key] = el.value;
+      });
+
+      try {
+        for (const [key, value] of Object.entries(values)) {
+          await fetch(`${API_BASE}/admin/config`, {
+            method: 'POST',
+            headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value })
+          });
+        }
+        showToast('配置已保存');
+      } catch (e) {
+        showToast('保存失败');
+      }
+    }
+
+    async function savePackageConfig() {
+      const packages = {
+        basic: $('config-package_basic')?.value || 1,
+        small: $('config-package_small')?.value || 30,
+        medium: $('config-package_medium')?.value || 70,
+        large: $('config-package_large')?.value || 100
+      };
+
+      try {
+        await fetch(`${API_BASE}/admin/config`, {
+          method: 'POST',
+          headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'packages', value: JSON.stringify(packages) })
+        });
+        showToast('套餐已保存');
+      } catch (e) {
+        showToast('保存失败');
+      }
+    }
+
+    function showModal(id) { $(id).classList.remove('hidden'); }
+    function closeModal() {
+      document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+    }
+
+    // 初始化
+    if (token) {
+      $('login-page').style.display = 'none';
+      $('admin-page').style.display = 'flex';
+      loadDashboard();
+    }
+  </script>
+</body>
+</html>
