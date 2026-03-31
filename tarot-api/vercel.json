@@ -3,7 +3,16 @@
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "node_modules/**",
+          "routes/**",
+          "services/**",
+          "models/**",
+          "data/**"
+        ]
+      }
     }
   ],
   "routes": [
@@ -11,11 +20,5 @@
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ],
-  "env": {
-    "TURSO_DATABASE_URL": "@turso_database_url",
-    "TURSO_AUTH_TOKEN": "@turso_auth_token",
-    "MINIMAX_API_KEY": "@minimax_api_key",
-    "JWT_SECRET": "@jwt_secret"
-  }
+  ]
 }
