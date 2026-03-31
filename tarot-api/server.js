@@ -125,7 +125,7 @@ app.get('/api/question-types', (req, res) => {
 // ============ 认证接口 ============
 
 // 用户注册
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
@@ -141,17 +141,17 @@ app.post('/api/auth/register', (req, res) => {
   }
 
   // 检查用户名是否已存在
-  const existingUser = db.getUserByUsername(username);
+  const existingUser = await db.getUserByUsername(username);
   if (existingUser) {
     return res.status(400).json({ error: '用户名已存在' });
   }
 
   // 创建用户（用户名+密码）
   const userId = uuidv4();
-  const user = db.createUserWithPassword(userId, username, password);
+  const user = await db.createUserWithPassword(userId, username, password);
   
   // 记录积分流水
-  db.addTransaction(userId, 'earn', NEW_USER_POINTS, '新用户注册奖励');
+  await db.addTransaction(userId, 'earn', NEW_USER_POINTS, '新用户注册奖励');
 
   const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
 
@@ -171,7 +171,7 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 // 用户登录
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
@@ -179,7 +179,7 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   // 查找用户
-  const user = db.getUserByUsername(username);
+  const user = await db.getUserByUsername(username);
 
   if (!user) {
     return res.status(401).json({ error: '用户名或密码错误' });
@@ -209,11 +209,11 @@ app.post('/api/auth/login', (req, res) => {
 
 // ============ 用户接口 ============
 
-app.get('/api/user/profile', authMiddleware, (req, res) => {
-  const user = db.getUserById(req.user.userId);
+app.get('/api/user/profile', authMiddleware, async (req, res) => {
+  const user = await db.getUserById(req.user.userId);
   if (!user) return res.status(404).json({ error: '用户不存在' });
 
-  const checkins = db.getCheckins(req.user.userId);
+  const checkins = await db.getCheckins(req.user.userId);
   const today = new Date().toISOString().split('T')[0];
   
   // 计算连续签到天数
@@ -245,13 +245,13 @@ app.get('/api/user/profile', authMiddleware, (req, res) => {
 
 // ============ 积分接口 ============
 
-app.post('/api/points/checkin', authMiddleware, (req, res) => {
-  const result = db.checkin(req.user.userId);
+app.post('/api/points/checkin', authMiddleware, async (req, res) => {
+  const result = await db.checkin(req.user.userId);
   if (result.error) {
     return res.status(400).json({ error: result.error });
   }
   
-  const user = db.getUserById(req.user.userId);
+  const user = await db.getUserById(req.user.userId);
   res.json({
     success: true,
     data: {
@@ -262,9 +262,9 @@ app.post('/api/points/checkin', authMiddleware, (req, res) => {
   });
 });
 
-app.get('/api/points/history', authMiddleware, (req, res) => {
+app.get('/api/points/history', authMiddleware, async (req, res) => {
   const { page = 1, limit = 20 } = req.query;
-  const data = db.getTransactions(req.user.userId, parseInt(page), parseInt(limit));
+  const data = await db.getTransactions(req.user.userId, parseInt(page), parseInt(limit));
   res.json({
     success: true,
     data: {
@@ -277,7 +277,7 @@ app.get('/api/points/history', authMiddleware, (req, res) => {
 
 // ============ 占卜接口 ============
 
-app.post('/api/reading/start', optionalAuth, (req, res) => {
+app.post('/api/reading/start', optionalAuth, async (req, res) => {
   const { question_type } = req.body;
   const questionConfig = cardSpreads.getQuestionType(question_type);
   
@@ -306,7 +306,7 @@ app.post('/api/reading/start', optionalAuth, (req, res) => {
   });
 });
 
-app.post('/api/reading/draw', (req, res) => {
+app.post('/api/reading/draw', async (req, res) => {
   const { selected_indices } = req.body;
   
   const cards = tarotDb.shuffleCards(78);
@@ -331,7 +331,7 @@ app.post('/api/reading/interpret', authMiddleware, async (req, res) => {
   const userId = req.user.userId;
 
   // 检查积分
-  const user = db.getUserById(userId);
+  const user = await db.getUserById(userId);
   if (user.points < POINTS_PER_READING) {
     return res.status(400).json({ 
       error: '积分不足',
@@ -349,21 +349,19 @@ app.post('/api/reading/interpret', authMiddleware, async (req, res) => {
   );
 
   // 扣积分
-  db.updateUserPoints(userId, -POINTS_PER_READING);
-  db.addTransaction(userId, 'spend', -POINTS_PER_READING, '占卜消耗', session_id);
+  await db.updateUserPoints(userId, -POINTS_PER_READING);
+  await db.addTransaction(userId, 'spend', -POINTS_PER_READING, '占卜消耗', session_id);
 
   // 保存解读
   const readingId = uuidv4();
-  db.saveReading({
+  await db.saveReading({
     id: readingId,
     user_id: userId,
     session_id,
     question_type,
     spread_id,
     cards: drawn_cards.map(c => ({ id: c.id, is_reversed: c.is_reversed })),
-    positions: drawn_cards.map((c, i) => ({ position: i, name: c.name_cn })),
-    interpretation,
-    is_cached
+    interpretation
   });
 
   res.json({
@@ -378,23 +376,23 @@ app.post('/api/reading/interpret', authMiddleware, async (req, res) => {
   });
 });
 
-app.get('/api/reading/history', authMiddleware, (req, res) => {
+app.get('/api/reading/history', authMiddleware, async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
-  const data = db.getReadings(req.user.userId, parseInt(page), parseInt(limit));
+  const data = await db.getReadings(req.user.userId, parseInt(page), parseInt(limit));
   res.json({ success: true, data });
 });
 
 // ============ 分享接口 ============
 
-app.post('/api/share', authMiddleware, (req, res) => {
+app.post('/api/share', authMiddleware, async (req, res) => {
   const { reading_id } = req.body;
 
-  const reading = db.getReadingById(reading_id);
+  const reading = await db.getReadingById(reading_id);
   if (!reading) {
     return res.status(404).json({ error: '解读不存在' });
   }
 
-  const existingShare = db.getShare(req.user.userId, reading_id);
+  const existingShare = await db.getShare(req.user.userId, reading_id);
   if (existingShare) {
     return res.json({
       success: true,
@@ -403,13 +401,13 @@ app.post('/api/share', authMiddleware, (req, res) => {
   }
 
   const shareId = uuidv4();
-  db.saveShare(shareId, req.user.userId, reading_id, 'unknown');
+  await db.createShare(shareId, req.user.userId, reading_id);
 
   const shareReward = 3;
-  db.updateUserPoints(req.user.userId, shareReward);
-  db.addTransaction(req.user.userId, 'earn', shareReward, '分享奖励', shareId);
+  await db.updateUserPoints(req.user.userId, shareReward);
+  await db.addTransaction(req.user.userId, 'earn', shareReward, '分享奖励', shareId);
 
-  const user = db.getUserById(req.user.userId);
+  const user = await db.getUserById(req.user.userId);
 
   res.json({
     success: true,
@@ -463,20 +461,18 @@ app.post('/api/pay/create-order', authMiddleware, async (req, res) => {
   const orderId = uuidv4();
   const expiredAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
-  db.createOrder({
+  await db.createOrder({
     id: orderId,
     user_id: req.user.userId,
-    package_id: pkg.id,
     package_name: pkg.name,
     points: pkg.points,
-    price: pkg.price,
-    expired_at: expiredAt
+    amount: pkg.price
   });
 
   // 生成支付二维码
   const wechatConfig = {
-    appid: db.getConfig('wechat_appid'),
-    mchid: db.getConfig('wechat_mchid')
+    appid: await db.getConfig('wechat_appid'),
+    mchid: await db.getConfig('wechat_mchid')
   };
 
   try {
@@ -490,7 +486,7 @@ app.post('/api/pay/create-order', authMiddleware, async (req, res) => {
       qrcodeUrl = `http://localhost:${PORT}/api/pay/mock-qr/${orderId}`;
     }
     
-    db.updateOrderQRCode(orderId, qrcodeUrl);
+    await db.updateOrderQRCode(orderId, qrcodeUrl);
 
     res.json({
       success: true,
@@ -522,8 +518,8 @@ async function createWechatPay(orderId, totalFee, config) {
   return payInfo;
 }
 
-app.get('/api/pay/order/:orderId', authMiddleware, (req, res) => {
-  const order = db.getOrder(req.params.orderId);
+app.get('/api/pay/order/:orderId', authMiddleware, async (req, res) => {
+  const order = await db.getOrder(req.params.orderId);
   if (!order || order.user_id !== req.user.userId) {
     return res.status(404).json({ error: '订单不存在' });
   }
@@ -531,7 +527,7 @@ app.get('/api/pay/order/:orderId', authMiddleware, (req, res) => {
 });
 
 app.get('/api/pay/mock-qr/:orderId', async (req, res) => {
-  const order = db.getOrder(req.params.orderId);
+  const order = await db.getOrder(req.params.orderId);
   if (!order) return res.status(404).send('Order not found');
 
   const qrDataUrl = await QRCode.toDataURL(`http://localhost:${PORT}/api/pay/mock/${order.id}`);
@@ -600,24 +596,24 @@ app.get('/api/pay/mock-qr/:orderId', async (req, res) => {
   `);
 });
 
-app.post('/api/pay/mock-callback/:orderId', (req, res) => {
-  const order = db.getOrder(req.params.orderId);
+app.post('/api/pay/mock-callback/:orderId', async (req, res) => {
+  const order = await db.getOrder(req.params.orderId);
   if (!order || order.status !== 'pending') {
     return res.status(404).json({ error: '订单不存在或已处理' });
   }
 
   // 检查是否过期
   if (new Date(order.expired_at) < new Date()) {
-    db.updateOrderStatus(order.id, 'expired');
+    await db.updateOrderStatus(order.id, 'expired');
     return res.status(400).json({ error: '订单已过期' });
   }
 
   // 更新订单
-  db.updateOrderStatus(order.id, 'paid');
+  await db.updateOrderStatus(order.id, 'paid');
 
   // 增加积分
-  db.updateUserPoints(order.user_id, order.points);
-  db.addTransaction(order.user_id, 'earn', order.points, `购买积分（${order.package_name}）`, order.id);
+  await db.updateUserPoints(order.user_id, order.points);
+  await db.addTransaction(order.user_id, 'earn', order.points, `购买积分（${order.package_name}）`, order.id);
 
   res.json({ success: true });
 });
@@ -635,42 +631,44 @@ app.post('/api/admin/login', (req, res) => {
   res.status(401).json({ error: '账号或密码错误' });
 });
 
-app.get('/api/admin/config', adminAuth, (req, res) => {
-  res.json({ success: true, data: db.getAllConfig() });
+app.get('/api/admin/config', adminAuth, async (req, res) => {
+  const result = await db.execute({ sql: "SELECT * FROM config", args: [] });
+  res.json({ success: true, data: result.rows });
 });
 
-app.post('/api/admin/config', adminAuth, (req, res) => {
+app.post('/api/admin/config', adminAuth, async (req, res) => {
   const { key, value } = req.body;
-  db.setConfig(key, value);
+  await db.setConfig(key, value);
   res.json({ success: true });
 });
 
-app.get('/api/admin/stats', adminAuth, (req, res) => {
-  res.json({ success: true, data: db.getStats() });
+app.get('/api/admin/stats', adminAuth, async (req, res) => {
+  const stats = await db.getStats();
+  res.json({ success: true, data: stats });
 });
 
-app.get('/api/admin/users', adminAuth, (req, res) => {
+app.get('/api/admin/users', adminAuth, async (req, res) => {
   const { page = 1, limit = 20, search = '' } = req.query;
-  const data = db.getAllUsers(parseInt(page), parseInt(limit), search);
+  const data = await db.getAllUsers(parseInt(page), parseInt(limit), search);
   res.json({ success: true, data });
 });
 
-app.get('/api/admin/users/:userId', adminAuth, (req, res) => {
-  const user = db.getUserDetail(req.params.userId);
+app.get('/api/admin/users/:userId', adminAuth, async (req, res) => {
+  const user = await db.getUserById(req.params.userId);
   if (!user) return res.status(404).json({ error: '用户不存在' });
   res.json({ success: true, data: user });
 });
 
-app.post('/api/admin/users/:userId/points', adminAuth, (req, res) => {
+app.post('/api/admin/users/:userId/points', adminAuth, async (req, res) => {
   const { amount, reason } = req.body;
-  const user = db.getUserById(req.params.userId);
+  const user = await db.getUserById(req.params.userId);
   if (!user) return res.status(404).json({ error: '用户不存在' });
 
   const newPoints = user.points + parseInt(amount);
   if (newPoints < 0) return res.status(400).json({ error: '积分不能为负' });
 
-  db.updateUserPoints(user.id, parseInt(amount));
-  db.addTransaction(user.id, amount > 0 ? 'earn' : 'spend', parseInt(amount), reason || '管理员调整');
+  await db.updateUserPoints(user.id, parseInt(amount));
+  await db.addTransaction(user.id, amount > 0 ? 'earn' : 'spend', parseInt(amount), reason || '管理员调整');
 
   res.json({ success: true, data: { new_points: newPoints } });
 });
